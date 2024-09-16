@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	enTranslations "github.com/go-playground/validator/v10/translations/en"
 	idTranslations "github.com/go-playground/validator/v10/translations/id"
+	"github.com/sirupsen/logrus"
 )
 
 func TranslateError(err error, trans ut.Translator) (errs []error) {
@@ -35,7 +36,7 @@ func TranslatorValidator(v *validator.Validate) ut.Translator {
 	uni := ut.New(english, english)
 	trans, _ := uni.GetTranslator("en")
 	if err := enTranslations.RegisterDefaultTranslations(v, trans); err != nil {
-		logrus.WithError(err).Warnln("failed register default translation")
+		logrus.WithError(err).Error("failed register default translation")
 	}
 
 	return trans
@@ -45,7 +46,7 @@ func TranslatorValidatorIDN(v *validator.Validate) ut.Translator {
 	uni := ut.New(idn, idn)
 	trans, _ := uni.GetTranslator("id")
 	if err := idTranslations.RegisterDefaultTranslations(v, trans); err != nil {
-		logrus.WithError(err).Warnln("failed register default translation")
+		logrus.WithError(err).Error("failed register default translation")
 	}
 
 	return trans
