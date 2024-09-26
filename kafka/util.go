@@ -6,19 +6,15 @@ import (
 	"crypto/sha512"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
+	"hash"
 	"io/ioutil"
-	"os"
-	"time"
 
-	"gitlab.sicepat.tech/platform/golib/log"
-
+	"github.com/sirupsen/logrus"
 	"github.com/xdg/scram"
 )
 
-var SHA256 scram.HashGeneratorFcn = sha256.New
-var SHA512 scram.HashGeneratorFcn = sha512.New
+var SHA256 scram.HashGeneratorFcn = func() hash.Hash { return sha256.New() }
+var SHA512 scram.HashGeneratorFcn = func() hash.Hash { return sha512.New() }
 
 type XDGSCRAMClient struct {
 	*scram.Client
@@ -46,18 +42,18 @@ func (x *XDGSCRAMClient) Done() bool {
 
 func createTlsConfig(c TLS) (t *tls.Config) {
 	t = &tls.Config{
-		//nolint:gosec // just skip to verify
+		//nolint:gosec
 		InsecureSkipVerify: c.SkipVerify,
 	}
 	if c.CertFile != "" && c.KeyFile != "" && c.CaFile != "" {
 		cert, err := tls.LoadX509KeyPair(c.CertFile, c.KeyFile)
 		if err != nil {
-			log.Fatal(err)
+			logrus.Fatal(err)
 		}
 
 		caCert, err := ioutil.ReadFile(c.CaFile)
 		if err != nil {
-			log.Fatal(err)
+			logrus.Fatal(err)
 		}
 
 		caCertPool := x509.NewCertPool()
@@ -66,53 +62,8 @@ func createTlsConfig(c TLS) (t *tls.Config) {
 		t = &tls.Config{
 			Certificates:       []tls.Certificate{cert},
 			RootCAs:            caCertPool,
-			InsecureSkipVerify: c.SkipVerify, //nolint:gosec // insecure skip verify
+			InsecureSkipVerify: c.SkipVerify, //nolint:gosec
 		}
 	}
 	return t
-}
-
-type SicepatMessageFormat struct {
-	Data     interface{}            `json:"data,omitempty"`
-	Metadata SicepatMessageMetadata `json:"metadata,omitempty"`
-}
-
-type SicepatMessageMetadata struct {
-	EmitHost  string    `json:"emit_host,omitempty"`
-	EmitTime  int64     `json:"emit_time,omitempty"`
-	Event     string    `json:"event,omitempty"`
-	Hash      string    `json:"hash,omitempty"`
-	Timestamp time.Time `json:"timestamp,omitempty"`
-}
-
-func BuildPayload(data interface{}, topic string) (*SicepatMessageFormat, error) {
-	hostName, err := os.Hostname()
-	if err != nil {
-		return nil, err
-	}
-	hashm, err := hashPayload(data)
-	if err != nil {
-		return nil, err
-	}
-	nowTime := time.Now()
-	metadata := SicepatMessageMetadata{
-		EmitHost:  hostName,
-		EmitTime:  nowTime.Unix(),
-		Event:     topic,
-		Hash:      hashm,
-		Timestamp: nowTime,
-	}
-	return &SicepatMessageFormat{
-		Data:     data,
-		Metadata: metadata,
-	}, nil
-}
-
-func hashPayload(m interface{}) (string, error) {
-	mb, err := json.Marshal(m)
-	if err != nil {
-		return "", err
-	}
-	k := sha256.Sum256(mb)
-	return string(base64.StdEncoding.EncodeToString(k[:])), nil //nolint:unconvert // ignore convert
 }

@@ -12,8 +12,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-
-	"gitlab.sicepat.tech/platform/golib/log"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -50,7 +49,7 @@ func NewConsumerGroup(cfg *Config) Consumer {
 
 	version, err := sarama.ParseKafkaVersion(cfg.Version)
 	if err != nil {
-		log.WithFields(lf).Fatal(fmt.Sprintf("parse kafka version got: %v", err))
+		logrus.WithFields(lf).Fatal(fmt.Sprintf("parse kafka version got: %v", err))
 	}
 
 	if cfg.SASL.Enable {
@@ -85,7 +84,7 @@ func NewConsumerGroup(cfg *Config) Consumer {
 
 	if !ok {
 		lf["state"] = "ParseKafkaRebalanceStrategy"
-		log.WithFields(lf).Fatal(fmt.Sprintf(
+		logrus.WithFields(lf).Fatal(fmt.Sprintf(
 			`rebalance strateggy only available : %q, %q, %q,   on setting value : %q`,
 			sarama.RoundRobinBalanceStrategyName,
 			sarama.RangeBalanceStrategyName,
@@ -118,7 +117,7 @@ func (k *consumerGroup) Subscribe(ctx *ConsumerContext) {
 	client, err := sarama.NewConsumerGroup(k.brokers, ctx.GroupID, k.config)
 
 	if err != nil {
-		log.WithFields(lf).Fatal(err.Error())
+		logrus.WithFields(lf).Fatal(err.Error())
 	}
 
 	handler := NewConsumerHandler(ctx.Handler, k.autoCommit, ctx.GroupID)
@@ -133,7 +132,7 @@ func (k *consumerGroup) Subscribe(ctx *ConsumerContext) {
 	// subscriber errors
 	go func() {
 		for err := range client.Errors() {
-			log.WithFields(lf).Error(err.Error())
+			logrus.WithFields(lf).Error(err.Error())
 		}
 	}()
 
@@ -142,19 +141,19 @@ func (k *consumerGroup) Subscribe(ctx *ConsumerContext) {
 			select {
 			case <-nCtx.Done():
 				lf["state"] = logStateNameTerminated
-				log.WithFields(lf).Warn(fmt.Sprintf("stopped consume topics %v", ctx.Topics))
+				logrus.WithFields(lf).Warn(fmt.Sprintf("stopped consume topics %v", ctx.Topics))
 				return
 			default:
 				err := client.Consume(nCtx, ctx.Topics, handler)
 				if err != nil {
-					log.WithFields(lf).Warn(fmt.Sprintf("consume topic %v message error %s", ctx.Topics, err.Error()))
+					logrus.WithFields(lf).Warn(fmt.Sprintf("consume topic %v message error %s", ctx.Topics, err.Error()))
 				}
 			}
 		}
 	}()
 
 	lf["state"] = logStateNameStarting
-	log.WithFields(lf).Info(fmt.Sprintf("consumer group up and running!... group %s, queue %v", ctx.Context, ctx.Topics))
+	logrus.WithFields(lf).Info(fmt.Sprintf("consumer group up and running!... group %s, queue %v", ctx.Context, ctx.Topics))
 
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
@@ -163,6 +162,6 @@ func (k *consumerGroup) Subscribe(ctx *ConsumerContext) {
 
 	cancel()
 	lf["state"] = logStateNameTerminated
-	log.WithFields(lf).Info("Cancelled message without marking offsets")
+	logrus.WithFields(lf).Info("Cancelled message without marking offsets")
 
 }

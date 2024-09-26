@@ -10,7 +10,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/google/uuid"
-	"gitlab.sicepat.tech/platform/golib/log"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -62,7 +62,7 @@ func (k *producer) Publish(_ context.Context, msg *MessageContext) error {
 	if msg.Verbose {
 		lf := map[string]interface{}{}
 		lf["msg"] = msg.Value
-		log.WithFields(lf).Info(fmt.Sprintf("[kafka-publisher] topic: %s,  partition: %d, offset: %d", msg.Topic, partition, offset))
+		logrus.WithFields(lf).Info(fmt.Sprintf("[kafka-publisher] topic: %s,  partition: %d, offset: %d", msg.Topic, partition, offset))
 	}
 	return nil
 }
@@ -83,7 +83,7 @@ func NewProducer(cfg *Config) Producer {
 
 	version, err := sarama.ParseKafkaVersion(cfg.Version)
 	if err != nil {
-		log.Fatal(fmt.Sprintf("parse kafka version got: %v", err))
+		logrus.Fatal(fmt.Sprintf("parse kafka version got: %v", err))
 	}
 
 	config.Producer.Idempotent = cfg.Producer.IdemPotent
@@ -103,7 +103,7 @@ func NewProducer(cfg *Config) Producer {
 	strategy, ok := partitiions[cfg.Producer.PartitionStrategy]
 
 	if !ok {
-		log.Fatal(fmt.Sprintf("[kafka] invalid producer partition strategy %s", cfg.Producer.PartitionStrategy))
+		logrus.Fatal(fmt.Sprintf("[kafka] invalid producer partition strategy %s", cfg.Producer.PartitionStrategy))
 	}
 
 	if cfg.SASL.Enable {
@@ -144,7 +144,7 @@ func NewProducer(cfg *Config) Producer {
 	producer, err := sarama.NewSyncProducer(cfg.Brokers, config)
 
 	if err != nil {
-		log.Fatal(fmt.Sprintf("failed to start Sarama producer:%s", err.Error()))
+		logrus.Fatal(fmt.Sprintf("failed to start Sarama producer:%s", err.Error()))
 	}
 
 	m.producer = producer

@@ -9,16 +9,16 @@ import (
 	"strings"
 	"time"
 
+	cache "github.com/dodirepository/common-lib/cache"
 	"github.com/go-redis/redis/extra/redisotel"
 	redis "github.com/go-redis/redis/v8"
-	cache "gitlab.sicepat.tech/platform/golib/cache"
 )
 
 const defaultNS = "redis"
 const schema = "redis"
 const schemaRedisCluster = "redis-cluster"
 
-//Cache redis cache object
+// Cache redis cache object
 type Cache struct {
 	client        *redis.Client
 	ns            string
@@ -30,7 +30,7 @@ func init() {
 	cache.Register(schemaRedisCluster, NewCacheCluster)
 }
 
-//NewCache create new redis cache
+// NewCache create new redis cache
 func NewCache(url *url.URL) (cache.Cache, error) {
 	p, _ := url.User.Password()
 	opt := &redis.Options{
@@ -93,7 +93,7 @@ func NewCacheCluster(url *url.URL) (cache.Cache, error) {
 	return cache, err
 }
 
-//NewRedisCache creating instance of redis cache
+// NewRedisCache creating instance of redis cache
 func NewRedisCache(ns string, option ...Option) (*Cache, error) {
 	r := &redis.Options{}
 	for _, o := range option {
@@ -158,7 +158,7 @@ func TLSOption(address string) Option {
 	}
 }
 
-//Set set value
+// Set set value
 func (c *Cache) Set(ctx context.Context, key string, value interface{}, expiration int) error {
 	switch value.(type) {
 	case string, bool, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, []byte:
@@ -172,7 +172,7 @@ func (c *Cache) Set(ctx context.Context, key string, value interface{}, expirati
 	}
 }
 
-//Increment increment int value
+// Increment increment int value
 func (c *Cache) Increment(ctx context.Context, key string, expiration int) (int64, error) {
 	switch expiration {
 	case 0:
@@ -195,7 +195,7 @@ func (c *Cache) Increment(ctx context.Context, key string, expiration int) (int6
 	}
 }
 
-//Get get value
+// Get get value
 func (c *Cache) Get(ctx context.Context, key string) ([]byte, error) {
 	b, err := c.client.Get(ctx, c.ns+key).Bytes()
 	if err != nil {
@@ -207,7 +207,7 @@ func (c *Cache) Get(ctx context.Context, key string) ([]byte, error) {
 	return b, nil
 }
 
-//GetObject get object value
+// GetObject get object value
 func (c *Cache) GetObject(ctx context.Context, key string, doc interface{}) error {
 	b, err := c.client.Get(ctx, c.ns+key).Bytes()
 	if err != nil {
@@ -219,7 +219,7 @@ func (c *Cache) GetObject(ctx context.Context, key string, doc interface{}) erro
 	return json.Unmarshal(b, doc)
 }
 
-//GetString get string value
+// GetString get string value
 func (c *Cache) GetString(ctx context.Context, key string) (string, error) {
 	s, err := c.client.Get(ctx, c.ns+key).Result()
 	if err != nil {
@@ -231,7 +231,7 @@ func (c *Cache) GetString(ctx context.Context, key string) (string, error) {
 	return s, nil
 }
 
-//GetInt get int value
+// GetInt get int value
 func (c *Cache) GetInt(ctx context.Context, key string) (int64, error) {
 	i, err := c.client.Get(ctx, c.ns+key).Int64()
 	if err != nil {
@@ -243,7 +243,7 @@ func (c *Cache) GetInt(ctx context.Context, key string) (int64, error) {
 	return i, nil
 }
 
-//GetFloat get float value
+// GetFloat get float value
 func (c *Cache) GetFloat(ctx context.Context, key string) (float64, error) {
 	f, err := c.client.Get(ctx, c.ns+key).Float64()
 	if err != nil {
@@ -255,12 +255,12 @@ func (c *Cache) GetFloat(ctx context.Context, key string) (float64, error) {
 	return f, nil
 }
 
-//Exist check if key exist
+// Exist check if key exist
 func (c *Cache) Exist(ctx context.Context, key string) bool {
 	return c.client.Exists(ctx, c.ns+key).Val() > 0
 }
 
-//Delete delete record
+// Delete delete record
 func (c *Cache) Delete(ctx context.Context, key string, opts ...cache.DeleteOptions) error {
 	deleteCache := &cache.DeleteCache{}
 	for _, opt := range opts {
@@ -282,7 +282,7 @@ func (c *Cache) GetKeys(ctx context.Context, pattern string) []string {
 	return keys
 }
 
-//deletePattern delete record by pattern
+// deletePattern delete record by pattern
 func (c *Cache) deletePattern(ctx context.Context, pattern string) error {
 	iter := c.client.Scan(ctx, 0, c.ns+pattern, 0).Iterator()
 	var localKeys []string
@@ -309,12 +309,12 @@ func (c *Cache) deletePattern(ctx context.Context, pattern string) error {
 	return nil
 }
 
-//RemainingTime get remaining time
+// RemainingTime get remaining time
 func (c *Cache) RemainingTime(ctx context.Context, key string) int {
 	return int(c.client.TTL(ctx, c.ns+key).Val().Seconds())
 }
 
-//Close close connection
+// Close close connection
 func (c *Cache) Close() error {
 	return c.client.Close()
 }
